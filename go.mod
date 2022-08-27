@@ -1,4 +1,4 @@
-module github.com/samjtro/stock-news
+module github.com/samjtro/sn
 
 go 1.19
 
