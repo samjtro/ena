@@ -44,20 +44,8 @@ type GoogleNewsURLs struct {
 }
 
 func init() {
-	c.OnRequest(func(r *colly.Request) {
-		fmt.Println("Visiting: ", r.URL)
-	})
-
 	c.OnError(func(_ *colly.Response, err error) {
 		log.Println("Error: ", err)
-	})
-
-	c.OnResponse(func(r *colly.Response) {
-		fmt.Println("Connection Established")
-	})
-
-	c.OnScraped(func(r *colly.Response) {
-		fmt.Println("Finished!")
 	})
 
 	flag.StringVar(&typeFlag, "t", "kw", "Type of search. Options: 'keyword' 'kw'. Default is 'kw'")
@@ -75,7 +63,6 @@ func main() {
 		keywordList := strings.Split(keywordFlag, ",")
 
 		for _, keyword := range keywordList {
-			fmt.Printf("Searching for Keyword {%s}\n", keyword)
 			Scrape(keyword)
 		}
 	} else if typeFlag == "keyword" || typeFlag == "kw" {
