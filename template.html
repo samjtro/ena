@@ -1,0 +1,14 @@
+<!DOCTYPE html>
+<html>
+        <head>
+                <title>results</title>
+        </head>
+
+        <body>
+                <h2 align="center">Article List</h2>
+                
+                {{range .}}
+                        <h5><a href={{.URL}}>{{.Headline}}</a></h5>
+                {{end}} 
+        </body>
+</html>
