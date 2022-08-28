@@ -1,0 +1,1 @@
+./home/$USER/sn/sn

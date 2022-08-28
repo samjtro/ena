@@ -2,18 +2,31 @@ package main
 
 import (
 	"bytes"
-	"fmt"
 	"log"
 	"os"
 	"strconv"
 	"strings"
 	"text/template"
-	"time"
 
 	"github.com/gocolly/colly"
 	"github.com/joho/godotenv"
-	gomail "gopkg.in/gomail.v2"
 )
+
+type PRNewsWireURLs struct {
+	Keyword           string
+	BusinessTech      string
+	GeneralBusiness   string
+	FinancialServices string
+}
+
+type GoogleNewsURLs struct {
+	Keyword string
+}
+
+type Article struct {
+	Keyword     string
+	HeadlineURL map[string]string
+}
 
 var (
 	typeFlag         string
@@ -42,22 +55,6 @@ var (
 	c = colly.NewCollector()
 )
 
-type PRNewsWireURLs struct {
-	Keyword           string
-	BusinessTech      string
-	GeneralBusiness   string
-	FinancialServices string
-}
-
-type GoogleNewsURLs struct {
-	Keyword string
-}
-
-type Article struct {
-	Headline string
-	URL      string
-}
-
 func init() {
 	err := godotenv.Load("config.env")
 
@@ -65,7 +62,7 @@ func init() {
 		log.Fatalf("Error: %s", err.Error())
 	}
 
-	typeFlag = os.Getenv("type")
+	typeFlag = os.Getenv("Type")
 	siteFlag = os.Getenv("site")
 	keywordFlag = os.Getenv("keyword")
 	utcDiffFlag = os.Getenv("utcdiff")
@@ -100,22 +97,11 @@ func main() {
 		Scrape(keywordFlag)
 	}
 
-	msg := gomail.NewMessage()
-	msg.SetHeader("From", fromFlag)
-	msg.SetHeader("To", toFlag)
-	msg.SetHeader("Subject", fmt.Sprintf("[sn] Keyword: %s, Site: %s - %s", keywordFlag, siteFlag, Now(time.Now())))
-
 	tmpl := template.Must(template.ParseFiles("template.html"))
 
 	if err := tmpl.Execute(&tpl, results); err != nil {
 		log.Fatalf("Error: %s", err.Error())
 	}
 
-	msgString := tpl.String()
-	msg.SetBody("text/html", msgString)
-	handler := gomail.NewDialer("smtp.gmail.com", 587, fromFlag, fromPasswordFlag)
-
-	if err := handler.DialAndSend(msg); err != nil {
-		log.Fatalf("Error: %s", err.Error())
-	}
+	SendEmail(tpl.String())
 }
