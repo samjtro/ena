@@ -49,6 +49,7 @@ var (
 	daysSinceFlag    int
 	utcDiffFlag      string
 	results          []Article
+	tmpl             *template.Template
 
 	prNewsWireURLList = PRNewsWireURLs{
 		Keyword:           "https://www.prnewswire.com/search/all/?keyword=%s",
@@ -71,7 +72,8 @@ func init() {
 		log.Fatalf(err.Error())
 	}
 
-	err = godotenv.Load(fmt.Sprintf("/home/%s/sn/config.env", currentUser.Username))
+	tmpl = template.Must(template.ParseFiles(fmt.Sprintf("/home/%s/sn/template.html", currentUser.Username)))
+	err = godotenv.Load(fmt.Sprintf("/home/%s/config.env", currentUser.Username))
 
 	if err != nil {
 		log.Fatal(err)
@@ -114,7 +116,6 @@ func main() {
 		Scrape(keywordFlag)
 	}
 
-	tmpl := template.Must(template.ParseFiles("template.html"))
 	db, err := badger.Open(badger.DefaultOptions("/tmp/badger"))
 
 	if err != nil {
@@ -226,9 +227,5 @@ func main() {
 
 			SendEmail(emailContents.String())
 		}
-	}
-
-	if err := tmpl.Execute(&emailContents, results); err != nil {
-		log.Fatal(err)
 	}
 }

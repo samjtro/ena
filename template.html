@@ -1,5 +1,9 @@
 <!DOCTYPE html>
 <html>
+        <head>
+                <title>results</title>
+        </head>
+
         <body>
                 <h2 align="center">Article List</h2>
                 
@@ -7,6 +11,7 @@
                         {{.Keyword}}
                         {{range .HeadlineURL}}
                                 <a href={{.URL}}>{{.Headline}}</a>
+                        {{end}}
                 {{end}} 
         </body>
 </html>
