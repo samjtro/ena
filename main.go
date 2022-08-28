@@ -3,8 +3,10 @@ package main
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"log"
 	"os"
+	"os/user"
 	"strconv"
 	"strings"
 	"text/template"
@@ -63,7 +65,13 @@ var (
 )
 
 func init() {
-	err := godotenv.Load("config.env")
+	currentUser, err := user.Current()
+
+	if err != nil {
+		log.Fatalf(err.Error())
+	}
+
+	err = godotenv.Load(fmt.Sprintf("/home/%s/sn/config.env", currentUser.Username))
 
 	if err != nil {
 		log.Fatal(err)
