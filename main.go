@@ -2,9 +2,8 @@ package main
 
 import (
 	"flag"
-	"html/template"
+	"fmt"
 	"log"
-	"net/http"
 	"strings"
 
 	"github.com/gocolly/colly"
@@ -28,7 +27,7 @@ var (
 	}
 
 	googleNewsURLList = GoogleNewsURLs{
-		Keyword: "https://news.google.com/search?q=%s", //%20when%3A%dd
+		Keyword: "https://news.google.com/search?q=%s%%20when%%3A%dd",
 	}
 
 	c = colly.NewCollector()
@@ -67,8 +66,6 @@ func init() {
 }
 
 func main() {
-	tmpl := template.Must(template.ParseFiles("template.html"))
-
 	if typeFlag == "multi-keyword" || typeFlag == "mkw" {
 		keywordList := strings.Split(keywordFlag, ",")
 
@@ -79,9 +76,7 @@ func main() {
 		Scrape(keywordFlag)
 	}
 
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		tmpl.Execute(w, results)
-	})
-
-	http.ListenAndServe(":80", nil)
+	for _, x := range results {
+		fmt.Printf("Headline:  %s\nURL:  %s\n\n", x.Headline, x.URL)
+	}
 }

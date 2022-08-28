@@ -9,9 +9,9 @@ import (
 
 // Scrape() executes different c.OnHTML() functions based on the set siteFlag.
 func Scrape(keyword string) {
-	if siteFlag == "google" || siteFlag == "g" {
-		var result Article
+	var result Article
 
+	if siteFlag == "google" || siteFlag == "g" {
 		c.OnHTML("h3.ipQwMb.ekueJc.RD0gLb", func(e *colly.HTMLElement) {
 			result.Headline = e.Text
 
@@ -22,10 +22,9 @@ func Scrape(keyword string) {
 			results = append(results, result)
 		})
 
+		fmt.Println(fmt.Sprintf(googleNewsURLList.Keyword, keyword, daysSinceFlag))
 		c.Visit(fmt.Sprintf(googleNewsURLList.Keyword, keyword, daysSinceFlag))
 	} else if siteFlag == "prnewswire" || siteFlag == "prn" {
-		var result Article
-
 		c.OnHTML("a.news-release", func(e *colly.HTMLElement) {
 			result.Headline += e.Text
 
