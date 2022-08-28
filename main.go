@@ -103,7 +103,7 @@ func main() {
 	msg := gomail.NewMessage()
 	msg.SetHeader("From", fromFlag)
 	msg.SetHeader("To", toFlag)
-	msg.SetHeader("Subject", fmt.Sprintf("Article List: %s", Now(time.Now())))
+	msg.SetHeader("Subject", fmt.Sprintf("[sn] Keyword: %s, Site: %s - %s", keywordFlag, siteFlag, Now(time.Now())))
 
 	tmpl := template.Must(template.ParseFiles("template.html"))
 
