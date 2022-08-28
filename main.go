@@ -1,29 +1,38 @@
 package main
 
 import (
-	"flag"
+	"bytes"
 	"fmt"
 	"log"
+	"os"
+	"strconv"
 	"strings"
+	"text/template"
+	"time"
 
 	"github.com/gocolly/colly"
+	"github.com/joho/godotenv"
+	gomail "gopkg.in/gomail.v2"
 )
 
 var (
-	typeFlag      string
-	siteFlag      string
-	keywordFlag   string
-	pageSizeFlag  int
-	daysSinceFlag int
-	/*sectorFlag   string
-	roundsFlag   int*/
-	results []Article
+	typeFlag         string
+	siteFlag         string
+	keywordFlag      string
+	fromFlag         string
+	fromPasswordFlag string
+	toFlag           string
+	pageSizeFlag     int
+	daysSinceFlag    int
+	utcDiffFlag      string
+	results          []Article
+	tpl              bytes.Buffer
 
 	prNewsWireURLList = PRNewsWireURLs{
-		Keyword: "https://www.prnewswire.com/search/all/?keyword=%s",
-		/*BusinessTech:      "https://www.prnewswire.com/news-releases/business-technology-latest-news/business-technology-latest-news-list/?page=%d&pagesize=%d",
+		Keyword:           "https://www.prnewswire.com/search/all/?keyword=%s",
+		BusinessTech:      "https://www.prnewswire.com/news-releases/business-technology-latest-news/business-technology-latest-news-list/?page=%d&pagesize=%d",
 		GeneralBusiness:   "https://www.prnewswire.com/news-releases/general-business-latest-news/general-business-latest-news-list/?page=%d&pagesize=%d",
-		FinancialServices: "https://www.prnewswire.com/news-releases/financial-services-latest-news/financial-services-latest-news-list/?page=%d&pagesize=%d",*/
+		FinancialServices: "https://www.prnewswire.com/news-releases/financial-services-latest-news/financial-services-latest-news-list/?page=%d&pagesize=%d",
 	}
 
 	googleNewsURLList = GoogleNewsURLs{
@@ -34,10 +43,10 @@ var (
 )
 
 type PRNewsWireURLs struct {
-	Keyword string
-	/*BusinessTech
-	GeneralBusiness
-	FinancialServices*/
+	Keyword           string
+	BusinessTech      string
+	GeneralBusiness   string
+	FinancialServices string
 }
 
 type GoogleNewsURLs struct {
@@ -50,19 +59,34 @@ type Article struct {
 }
 
 func init() {
+	err := godotenv.Load("config.env")
+
+	if err != nil {
+		log.Fatalf("Error: %s", err.Error())
+	}
+
+	typeFlag = os.Getenv("type")
+	siteFlag = os.Getenv("site")
+	keywordFlag = os.Getenv("keyword")
+	utcDiffFlag = os.Getenv("utcdiff")
+	fromFlag = os.Getenv("from")
+	fromPasswordFlag = os.Getenv("frompassword")
+	toFlag = os.Getenv("to")
+	pageSizeFlag, err = strconv.Atoi(os.Getenv("pagesize"))
+
+	if err != nil {
+		log.Fatalf("Error: %s", err.Error())
+	}
+
+	daysSinceFlag, err = strconv.Atoi(os.Getenv("dayssince"))
+
+	if err != nil {
+		log.Fatalf("Error: %s", err.Error())
+	}
+
 	c.OnError(func(_ *colly.Response, err error) {
 		log.Println("Error: ", err)
 	})
-
-	flag.StringVar(&typeFlag, "t", "kw", "Type of search. Options: 'multi-keyword' 'mkw' 'keyword' 'kw'. Default is 'kw'")
-	flag.StringVar(&siteFlag, "s", "google", "Site to search. Options: 'prnewswire' 'google'. Default is 'google'")
-	flag.StringVar(&keywordFlag, "kw", "apple", "Keyword(s) you'd like to search for. If you have multiple, seperate them with the ',' identifier (NO spaces). For multi-word strings, seperate them as I just did (e.g. word1-word2-...) Not neccesary for a sector search. ")
-	flag.IntVar(&pageSizeFlag, "ps", 100, "# of entries per page. Default is 100.")
-	flag.IntVar(&daysSinceFlag, "d", 7, "How many days before present to return articles worth of. Default is 7, e.g. T-7 days worth of articles.")
-	/*flag.StringVar(&sectorFlag, "s", "business-tech", "Sector for sector search. Options: 'business-tech' 'general-business' 'financial-services'")
-	flag.IntVar(&roundsFlag, "r", 1, "# of pages to iterate through. Default is 1.")*/
-
-	flag.Parse()
 }
 
 func main() {
@@ -76,7 +100,22 @@ func main() {
 		Scrape(keywordFlag)
 	}
 
-	for _, x := range results {
-		fmt.Printf("Headline:  %s\nURL:  %s\n\n", x.Headline, x.URL)
+	msg := gomail.NewMessage()
+	msg.SetHeader("From", fromFlag)
+	msg.SetHeader("To", toFlag)
+	msg.SetHeader("Subject", fmt.Sprintf("Article List: %s", Now(time.Now())))
+
+	tmpl := template.Must(template.ParseFiles("template.html"))
+
+	if err := tmpl.Execute(&tpl, results); err != nil {
+		log.Fatalf("Error: %s", err.Error())
+	}
+
+	msgString := tpl.String()
+	msg.SetBody("text/html", msgString)
+	handler := gomail.NewDialer("smtp.gmail.com", 587, fromFlag, fromPasswordFlag)
+
+	if err := handler.DialAndSend(msg); err != nil {
+		log.Fatalf("Error: %s", err.Error())
 	}
 }
