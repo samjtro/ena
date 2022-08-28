@@ -2,12 +2,14 @@ package main
 
 import (
 	"bytes"
+	"errors"
 	"log"
 	"os"
 	"strconv"
 	"strings"
 	"text/template"
 
+	badger "github.com/dgraph-io/badger/v3"
 	"github.com/gocolly/colly"
 	"github.com/joho/godotenv"
 )
@@ -23,12 +25,18 @@ type GoogleNewsURLs struct {
 	Keyword string
 }
 
+type HeadlineURL struct {
+	Headline string
+	URL      string
+}
+
 type Article struct {
 	Keyword     string
-	HeadlineURL map[string]string
+	HeadlineURL HeadlineURL
 }
 
 var (
+	sendEmail        bool
 	typeFlag         string
 	siteFlag         string
 	keywordFlag      string
@@ -39,7 +47,6 @@ var (
 	daysSinceFlag    int
 	utcDiffFlag      string
 	results          []Article
-	tpl              bytes.Buffer
 
 	prNewsWireURLList = PRNewsWireURLs{
 		Keyword:           "https://www.prnewswire.com/search/all/?keyword=%s",
@@ -59,7 +66,7 @@ func init() {
 	err := godotenv.Load("config.env")
 
 	if err != nil {
-		log.Fatalf("Error: %s", err.Error())
+		log.Fatal(err)
 	}
 
 	typeFlag = os.Getenv("Type")
@@ -72,24 +79,26 @@ func init() {
 	pageSizeFlag, err = strconv.Atoi(os.Getenv("pagesize"))
 
 	if err != nil {
-		log.Fatalf("Error: %s", err.Error())
+		log.Fatal(err)
 	}
 
 	daysSinceFlag, err = strconv.Atoi(os.Getenv("dayssince"))
 
 	if err != nil {
-		log.Fatalf("Error: %s", err.Error())
+		log.Fatal(err)
 	}
 
 	c.OnError(func(_ *colly.Response, err error) {
-		log.Println("Error: ", err)
+		log.Fatal(err)
 	})
 }
 
 func main() {
-	if typeFlag == "multi-keyword" || typeFlag == "mkw" {
-		keywordList := strings.Split(keywordFlag, ",")
+	var emailContents bytes.Buffer
+	var results1 []Article
+	keywordList := strings.Split(keywordFlag, ",")
 
+	if typeFlag == "multi-keyword" || typeFlag == "mkw" {
 		for _, keyword := range keywordList {
 			Scrape(keyword)
 		}
@@ -98,10 +107,120 @@ func main() {
 	}
 
 	tmpl := template.Must(template.ParseFiles("template.html"))
+	db, err := badger.Open(badger.DefaultOptions("/tmp/badger"))
 
-	if err := tmpl.Execute(&tpl, results); err != nil {
-		log.Fatalf("Error: %s", err.Error())
+	if err != nil {
+		log.Fatal(err)
 	}
 
-	SendEmail(tpl.String())
+	defer db.Close()
+
+	if typeFlag == "keyword" || typeFlag == "kw" {
+		var data string
+
+		for _, x := range results {
+			if typeFlag == x.Keyword {
+				data += x.HeadlineURL.URL
+			}
+		}
+
+		hash := Hash(data)
+
+		err = db.View(func(txn *badger.Txn) error {
+			it := txn.NewIterator(badger.DefaultIteratorOptions)
+
+			defer it.Close()
+
+			for it.Rewind(); it.Valid(); it.Next() {
+				item := it.Item()
+
+				var key, val []byte
+				item.KeyCopy(key)
+				item.ValueCopy(val)
+
+				if string(key) == keywordFlag {
+					if string(val) == hash {
+						return nil
+					} else {
+						return errors.New("")
+					}
+				} else {
+					return errors.New("")
+				}
+			}
+
+			return nil
+		})
+
+		if err != nil {
+			AddKeyValue(db, keywordFlag, hash)
+
+			if err := tmpl.Execute(&emailContents, results); err != nil {
+				log.Fatal(err)
+			}
+
+			SendEmail(emailContents.String())
+		}
+	} else if typeFlag == "multi-keyword" || typeFlag == "mkw" {
+		for _, x := range keywordList {
+			var data string
+
+			for _, y := range results {
+				if x == y.Keyword {
+					data += y.HeadlineURL.URL
+				}
+			}
+
+			hash := Hash(data)
+
+			err = db.View(func(txn *badger.Txn) error {
+				it := txn.NewIterator(badger.DefaultIteratorOptions)
+
+				defer it.Close()
+
+				for it.Rewind(); it.Valid(); it.Next() {
+					item := it.Item()
+
+					var key, val []byte
+					item.KeyCopy(key)
+					item.ValueCopy(val)
+
+					if string(key) == keywordFlag {
+						if string(val) == hash {
+							return nil
+						} else {
+							return errors.New("")
+						}
+					} else {
+						return errors.New("")
+					}
+				}
+
+				return nil
+			})
+
+			if err != nil {
+				sendEmail = true
+				AddKeyValue(db, keywordFlag, hash)
+
+				for _, z := range results {
+					if z.Keyword == x {
+						results1 = append(results1, z)
+					}
+				}
+			}
+		}
+
+		if sendEmail {
+			if err := tmpl.Execute(&emailContents, results1); err != nil {
+				log.Fatal(err)
+			}
+
+			SendEmail(emailContents.String())
+		}
+	}
+
+	if err := tmpl.Execute(&emailContents, results); err != nil {
+		log.Fatal(err)
+	}
 }

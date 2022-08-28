@@ -1,10 +1,13 @@
 package main
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"log"
 	"time"
 
+	badger "github.com/dgraph-io/badger/v3"
 	"github.com/gocolly/colly"
 	gomail "gopkg.in/gomail.v2"
 )
@@ -30,24 +33,24 @@ func Scrape(keyword string) {
 
 	if siteFlag == "google" || siteFlag == "g" {
 		c.OnHTML("h3.ipQwMb.ekueJc.RD0gLb", func(e *colly.HTMLElement) {
-			headline := e.Text
+			result.HeadlineURL.Headline = e.Text
 
 			unformattedLink := e.ChildAttr("a[href]", "href")
 			link := "https://news.google.com" + unformattedLink[1:]
 
-			result.HeadlineURL = make(map[headline]link)
+			result.HeadlineURL.URL = link
 			results = append(results, result)
 		})
 
 		c.Visit(fmt.Sprintf(googleNewsURLList.Keyword, keyword, daysSinceFlag))
 	} else if siteFlag == "prnewswire" || siteFlag == "prn" {
 		c.OnHTML("a.news-release", func(e *colly.HTMLElement) {
-			headline := e.Text
+			result.HeadlineURL.Headline = e.Text
 
 			unformattedLink := e.Attr("href")
 			link := "https://www.prnewswire.com/" + unformattedLink
 
-			result.HeadlineURL = make(map[headline]link)
+			result.HeadlineURL.URL = link
 			results = append(results, result)
 		})
 
@@ -68,4 +71,23 @@ func SendEmail(message string) {
 	if err := handler.DialAndSend(msg); err != nil {
 		log.Fatalf("Error: %s", err.Error())
 	}
+}
+
+func AddKeyValue(db *badger.DB, k, v string) {
+	err := db.Update(func(txn *badger.Txn) error {
+		e := badger.NewEntry([]byte(k), []byte(v))
+		err := txn.SetEntry(e)
+		return err
+	})
+
+	if err != nil {
+		log.Fatal(err)
+	}
+}
+
+func Hash(in string) string {
+	h := sha256.New()
+	h.Write([]byte(in))
+
+	return string(hex.EncodeToString(h.Sum(nil)))
 }
