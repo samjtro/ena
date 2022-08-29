@@ -55,6 +55,31 @@ func Scrape(keyword string) {
 		})
 
 		c.Visit(fmt.Sprintf(prNewsWireURLList.Keyword, keyword))
+	} else if siteFlag == "all" {
+		result1 := result
+		c.OnHTML("h3.ipQwMb.ekueJc.RD0gLb", func(e *colly.HTMLElement) {
+			result.HeadlineURL.Headline = e.Text
+
+			unformattedLink := e.ChildAttr("a[href]", "href")
+			link := "https://news.google.com" + unformattedLink[1:]
+
+			result.HeadlineURL.URL = link
+			results = append(results, result)
+		})
+
+		c.Visit(fmt.Sprintf(googleNewsURLList.Keyword, keyword, daysSinceFlag))
+
+		c.OnHTML("a.news-release", func(e *colly.HTMLElement) {
+			result1.HeadlineURL.Headline = e.Text
+
+			unformattedLink := e.Attr("href")
+			link := "https://www.prnewswire.com/" + unformattedLink
+
+			result1.HeadlineURL.URL = link
+			results = append(results, result1)
+		})
+
+		c.Visit(fmt.Sprintf(prNewsWireURLList.Keyword, keyword))
 	} else {
 		log.Fatalf("Incorrect Site Flag (--s). Should have been either 'google' or 'prnewswire'. Try again with a different value, or simply use the default 'prnewswire' by avoiding setting --s entirely.")
 	}

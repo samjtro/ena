@@ -2,7 +2,6 @@ package main
 
 import (
 	"bytes"
-	"errors"
 	"fmt"
 	"log"
 	"os"
@@ -135,31 +134,7 @@ func main() {
 
 		hash := Hash(data)
 
-		err = db.View(func(txn *badger.Txn) error {
-			it := txn.NewIterator(badger.DefaultIteratorOptions)
-
-			defer it.Close()
-
-			for it.Rewind(); it.Valid(); it.Next() {
-				item := it.Item()
-
-				var key, val []byte
-				item.KeyCopy(key)
-				item.ValueCopy(val)
-
-				if string(key) == keywordFlag {
-					if string(val) == hash {
-						return nil
-					} else {
-						return errors.New("")
-					}
-				} else {
-					return errors.New("")
-				}
-			}
-
-			return nil
-		})
+		err = CheckSimilarity(db, hash)
 
 		if err != nil {
 			AddKeyValue(db, keywordFlag, hash)
@@ -182,31 +157,7 @@ func main() {
 
 			hash := Hash(data)
 
-			err = db.View(func(txn *badger.Txn) error {
-				it := txn.NewIterator(badger.DefaultIteratorOptions)
-
-				defer it.Close()
-
-				for it.Rewind(); it.Valid(); it.Next() {
-					item := it.Item()
-
-					var key, val []byte
-					item.KeyCopy(key)
-					item.ValueCopy(val)
-
-					if string(key) == keywordFlag {
-						if string(val) == hash {
-							return nil
-						} else {
-							return errors.New("")
-						}
-					} else {
-						return errors.New("")
-					}
-				}
-
-				return nil
-			})
+			err = CheckSimilarity(db, hash)
 
 			if err != nil {
 				sendEmail = true
