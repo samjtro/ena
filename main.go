@@ -31,9 +31,9 @@ type HeadlineURL struct {
 	URL      string
 }
 
-type Article struct {
-	Keyword     string
-	HeadlineURL HeadlineURL
+type Articles struct {
+	Keyword      string
+	HeadlineURLs []HeadlineURL
 }
 
 var (
@@ -47,7 +47,9 @@ var (
 	pageSizeFlag     int
 	daysSinceFlag    int
 	utcDiffFlag      string
-	results          []Article
+	results          []Articles
+	resultsForEmail  []Articles
+	emailContents    bytes.Buffer
 	tmpl             *template.Template
 
 	prNewsWireURLList = PRNewsWireURLs{
@@ -62,6 +64,8 @@ var (
 	}
 
 	c = colly.NewCollector()
+
+	keywordList = strings.Split(keywordFlag, ",")
 )
 
 func init() {
@@ -103,18 +107,6 @@ func init() {
 }
 
 func main() {
-	var emailContents bytes.Buffer
-	var results1 []Article
-	keywordList := strings.Split(keywordFlag, ",")
-
-	if typeFlag == "multi-keyword" || typeFlag == "mkw" {
-		for _, keyword := range keywordList {
-			Scrape(keyword)
-		}
-	} else if typeFlag == "keyword" || typeFlag == "kw" {
-		Scrape(keywordFlag)
-	}
-
 	db, err := badger.Open(badger.DefaultOptions("/tmp/badger"))
 
 	if err != nil {
@@ -123,60 +115,13 @@ func main() {
 
 	defer db.Close()
 
-	if typeFlag == "keyword" || typeFlag == "kw" {
-		var data string
-
-		for _, x := range results {
-			if typeFlag == x.Keyword {
-				data += x.HeadlineURL.URL
-			}
+	if typeFlag == "multi-keyword" || typeFlag == "mkw" {
+		for _, keyword := range keywordList {
+			Scrape(db, keyword)
 		}
-
-		hash := Hash(data)
-
-		err = CheckSimilarity(db, hash)
-
-		if err != nil {
-			AddKeyValue(db, keywordFlag, hash)
-
-			if err := tmpl.Execute(&emailContents, results); err != nil {
-				log.Fatal(err)
-			}
-
-			SendEmail(emailContents.String())
-		}
-	} else if typeFlag == "multi-keyword" || typeFlag == "mkw" {
-		for _, x := range keywordList {
-			var data string
-
-			for _, y := range results {
-				if x == y.Keyword {
-					data += y.HeadlineURL.URL
-				}
-			}
-
-			hash := Hash(data)
-
-			err = CheckSimilarity(db, hash)
-
-			if err != nil {
-				sendEmail = true
-				AddKeyValue(db, keywordFlag, hash)
-
-				for _, z := range results {
-					if z.Keyword == x {
-						results1 = append(results1, z)
-					}
-				}
-			}
-		}
+	} else if typeFlag == "keyword" || typeFlag == "kw" {
+		Scrape(db, keywordFlag)
 	}
 
-	if sendEmail {
-		if err := tmpl.Execute(&emailContents, results1); err != nil {
-			log.Fatal(err)
-		}
-
-		SendEmail(emailContents.String())
-	}
+	SendEmail(emailContents.String())
 }

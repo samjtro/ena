@@ -8,10 +8,13 @@
                 <h2 align="center">Article List</h2>
                 
                 {{range .}}
-                        {{.Keyword}}
-                        {{range .HeadlineURL}}
-                                <a href={{.URL}}>{{.Headline}}</a>
-                        {{end}}
+                        <h4>{{.Keyword}}</h4>
+                                <ul>
+                                        {{range .HeadlineURLs}}
+                                        <li><a href={{.HeadlineURLs.URL}}>{{.HeadlineURLs.Headline}}</a></li>
+                                        {{end}}
+                                </ul>
+                                
                 {{end}} 
         </body>
 </html>

@@ -12,6 +12,11 @@ import (
 	gomail "gopkg.in/gomail.v2"
 )
 
+var (
+	headlineURLs []HeadlineURL
+	result       Articles
+)
+
 func Now(t time.Time) string {
 	str := fmt.Sprintf("%d-%d-%dT%d:%d:%d%s",
 		t.Year(),
@@ -25,58 +30,91 @@ func Now(t time.Time) string {
 	return str
 }
 
-// Scrape() executes different c.OnHTML() functions based on the set siteFlag.
-func Scrape(keyword string) {
-	result := Article{
-		Keyword: keyword,
+func Scrape(db *badger.DB, keyword string) {
+	ScrapeHelper(keyword)
+
+	if typeFlag == "keyword" || typeFlag == "kw" {
+		var data string
+
+		for i, x := range results {
+			if typeFlag == x.Keyword {
+				data += x.HeadlineURLs[i].URL
+			}
+		}
+
+		hash := Hash(data)
+		err := CheckSimilarity(db, keywordFlag, hash)
+
+		if err != nil {
+			AddKeyValue(db, keywordFlag, hash)
+
+			if err := tmpl.Execute(&emailContents, results); err != nil {
+				log.Fatal(err)
+			}
+
+			SendEmail(emailContents.String())
+		}
+	} else if typeFlag == "multi-keyword" || typeFlag == "mkw" {
+		for _, x := range keywordList {
+			var data string
+
+			for i, y := range results {
+				if x == y.Keyword {
+					data += y.HeadlineURLs[i].URL
+				}
+			}
+
+			hash := Hash(data)
+			err := CheckSimilarity(db, x, hash)
+
+			if err != nil {
+				sendEmail = true
+				AddKeyValue(db, x, hash)
+
+				for _, z := range results {
+					if z.Keyword == x {
+						resultsForEmail = append(resultsForEmail, z)
+					}
+				}
+			}
+		}
+	}
+
+	result.HeadlineURLs = headlineURLs
+}
+
+func ScrapeHelper(keyword string) {
+	headlineURL := HeadlineURL{}
+
+	if result.Keyword == "" {
+		result.Keyword = keyword
+	} else if result.Keyword != keyword {
+		results = append(results, result)
+		result = Articles{}
+		result.Keyword = keyword
 	}
 
 	if siteFlag == "google" || siteFlag == "g" {
 		c.OnHTML("h3.ipQwMb.ekueJc.RD0gLb", func(e *colly.HTMLElement) {
-			result.HeadlineURL.Headline = e.Text
+			headlineURL.Headline = e.Text
 
 			unformattedLink := e.ChildAttr("a[href]", "href")
 			link := "https://news.google.com" + unformattedLink[1:]
 
-			result.HeadlineURL.URL = link
-			results = append(results, result)
+			headlineURL.URL = link
+			headlineURLs = append(headlineURLs, headlineURL)
 		})
 
 		c.Visit(fmt.Sprintf(googleNewsURLList.Keyword, keyword, daysSinceFlag))
 	} else if siteFlag == "prnewswire" || siteFlag == "prn" {
 		c.OnHTML("a.news-release", func(e *colly.HTMLElement) {
-			result.HeadlineURL.Headline = e.Text
+			headlineURL.Headline = e.Text
 
 			unformattedLink := e.Attr("href")
 			link := "https://www.prnewswire.com/" + unformattedLink
 
-			result.HeadlineURL.URL = link
-			results = append(results, result)
-		})
-
-		c.Visit(fmt.Sprintf(prNewsWireURLList.Keyword, keyword))
-	} else if siteFlag == "all" {
-		result1 := result
-		c.OnHTML("h3.ipQwMb.ekueJc.RD0gLb", func(e *colly.HTMLElement) {
-			result.HeadlineURL.Headline = e.Text
-
-			unformattedLink := e.ChildAttr("a[href]", "href")
-			link := "https://news.google.com" + unformattedLink[1:]
-
-			result.HeadlineURL.URL = link
-			results = append(results, result)
-		})
-
-		c.Visit(fmt.Sprintf(googleNewsURLList.Keyword, keyword, daysSinceFlag))
-
-		c.OnHTML("a.news-release", func(e *colly.HTMLElement) {
-			result1.HeadlineURL.Headline = e.Text
-
-			unformattedLink := e.Attr("href")
-			link := "https://www.prnewswire.com/" + unformattedLink
-
-			result1.HeadlineURL.URL = link
-			results = append(results, result1)
+			headlineURL.URL = link
+			headlineURLs = append(headlineURLs, headlineURL)
 		})
 
 		c.Visit(fmt.Sprintf(prNewsWireURLList.Keyword, keyword))
@@ -95,18 +133,6 @@ func SendEmail(message string) {
 
 	if err := handler.DialAndSend(msg); err != nil {
 		log.Fatalf("Error: %s", err.Error())
-	}
-}
-
-func AddKeyValue(db *badger.DB, k, v string) {
-	err := db.Update(func(txn *badger.Txn) error {
-		e := badger.NewEntry([]byte(k), []byte(v))
-		err := txn.SetEntry(e)
-		return err
-	})
-
-	if err != nil {
-		log.Fatal(err)
 	}
 }
 

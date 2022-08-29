@@ -2,11 +2,24 @@ package main
 
 import (
 	"errors"
+	"log"
 
 	badger "github.com/dgraph-io/badger/v3"
 )
 
-func CheckSimilarity(db *badger.DB, hash string) error {
+func AddKeyValue(db *badger.DB, k, v string) {
+	err := db.Update(func(txn *badger.Txn) error {
+		e := badger.NewEntry([]byte(k), []byte(v))
+		err := txn.SetEntry(e)
+		return err
+	})
+
+	if err != nil {
+		log.Fatal(err)
+	}
+}
+
+func CheckSimilarity(db *badger.DB, keyword, hash string) error {
 	err := db.View(func(txn *badger.Txn) error {
 		it := txn.NewIterator(badger.DefaultIteratorOptions)
 
@@ -19,7 +32,7 @@ func CheckSimilarity(db *badger.DB, hash string) error {
 			item.KeyCopy(key)
 			item.ValueCopy(val)
 
-			if string(key) == keywordFlag {
+			if string(key) == keyword {
 				if string(val) == hash {
 					return nil
 				} else {
