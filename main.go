@@ -219,13 +219,13 @@ func main() {
 				}
 			}
 		}
+	}
 
-		if sendEmail {
-			if err := tmpl.Execute(&emailContents, results1); err != nil {
-				log.Fatal(err)
-			}
-
-			SendEmail(emailContents.String())
+	if sendEmail {
+		if err := tmpl.Execute(&emailContents, results1); err != nil {
+			log.Fatal(err)
 		}
+
+		SendEmail(emailContents.String())
 	}
 }
