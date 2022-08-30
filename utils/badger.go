@@ -1,4 +1,4 @@
-package main
+package utils
 
 import (
 	"errors"
@@ -6,6 +6,16 @@ import (
 
 	badger "github.com/dgraph-io/badger/v3"
 )
+
+func Start() *badger.DB {
+	db, err := badger.Open(badger.DefaultOptions("/tmp/badger"))
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	return db
+}
 
 func AddKeyValue(db *badger.DB, k, v string) {
 	err := db.Update(func(txn *badger.Txn) error {

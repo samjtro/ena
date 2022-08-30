@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"os/user"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"text/template"
@@ -103,6 +104,19 @@ func main() {
 	for _, keyword := range keywordList {
 		Scrape(keyword)
 	}
+
+	if err := tmpl.Execute(&emailContents, results); err != nil {
+		log.Fatal(err)
+	}
+
+	path := filepath.Join("var", "www", "html", "index.html")
+	file, err := os.Create(path)
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	defer file.Close()
 
 	if err := tmpl.Execute(&emailContents, results); err != nil {
 		log.Fatal(err)
