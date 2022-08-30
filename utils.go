@@ -7,14 +7,8 @@ import (
 	"log"
 	"time"
 
-	badger "github.com/dgraph-io/badger/v3"
 	"github.com/gocolly/colly"
 	gomail "gopkg.in/gomail.v2"
-)
-
-var (
-	headlineURLs []HeadlineURL
-	result       Articles
 )
 
 func Now(t time.Time) string {
@@ -30,46 +24,16 @@ func Now(t time.Time) string {
 	return str
 }
 
-func Scrape(db *badger.DB, keyword string) {
-	var data string
+func Scrape(keyword string) {
+	var headlineURLs []HeadlineURL
 
-	for _, x := range keywordList {
-		ScrapeHelper(keyword)
-
-		for i, y := range results {
-			if x == y.Keyword {
-				data += y.HeadlineURLs[i].URL
-			}
-		}
-
-		hash := Hash(data)
-		//err := CheckSimilarity(db, x, hash); if err != nil {
-		//sendEmail = true
-		AddKeyValue(db, x, hash)
-
-		for _, z := range results {
-			if z.Keyword == x {
-				resultsForEmail = append(resultsForEmail, z)
-			}
-		}
-	}
-
-}
-
-func ScrapeHelper(keyword string) {
-	headlineURL := HeadlineURL{}
-
-	if result.Keyword == "" {
-		result.Keyword = keyword
-	} else if result.Keyword != keyword {
-		result.HeadlineURLs = headlineURLs
-		results = append(results, result)
-		result = Articles{}
-		result.Keyword = keyword
+	result := Articles{
+		Keyword: keyword,
 	}
 
 	if siteFlag == "google" || siteFlag == "g" {
 		c.OnHTML("h3.ipQwMb.ekueJc.RD0gLb", func(e *colly.HTMLElement) {
+			headlineURL := HeadlineURL{}
 			headlineURL.Headline = e.Text
 
 			unformattedLink := e.ChildAttr("a[href]", "href")
@@ -80,8 +44,11 @@ func ScrapeHelper(keyword string) {
 		})
 
 		c.Visit(fmt.Sprintf(googleNewsURLList.Keyword, keyword, daysSinceFlag))
+		result.HeadlineURLs = headlineURLs
+		results = append(results, result)
 	} else if siteFlag == "prnewswire" || siteFlag == "prn" {
 		c.OnHTML("a.news-release", func(e *colly.HTMLElement) {
+			headlineURL := HeadlineURL{}
 			headlineURL.Headline = e.Text
 
 			unformattedLink := e.Attr("href")
@@ -92,6 +59,8 @@ func ScrapeHelper(keyword string) {
 		})
 
 		c.Visit(fmt.Sprintf(prNewsWireURLList.Keyword, keyword))
+		result.HeadlineURLs = headlineURLs
+		results = append(results, result)
 	} else {
 		log.Fatalf("Incorrect Site Flag (--s). Should have been either 'google' or 'prnewswire'. Try again with a different value, or simply use the default 'prnewswire' by avoiding setting --s entirely.")
 	}

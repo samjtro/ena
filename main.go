@@ -113,7 +113,7 @@ func main() {
 	defer db.Close()
 
 	for _, keyword := range keywordList {
-		Scrape(db, keyword)
+		Scrape(keyword)
 	}
 
 	if err := tmpl.Execute(&emailContents, resultsForEmail); err != nil {
