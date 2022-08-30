@@ -44,7 +44,6 @@ var (
 	daysSinceFlag    int
 	utcDiffFlag      string
 	results          []Articles
-	resultsForEmail  []Articles
 	emailContents    bytes.Buffer
 	tmpl             *template.Template
 
@@ -60,8 +59,6 @@ var (
 	}
 
 	c = colly.NewCollector()
-
-	keywordList = strings.Split(keywordFlag, ",")
 )
 
 func init() {
@@ -101,11 +98,13 @@ func init() {
 }
 
 func main() {
+	keywordList := strings.Split(keywordFlag, ",")
+
 	for _, keyword := range keywordList {
 		Scrape(keyword)
 	}
 
-	if err := tmpl.Execute(&emailContents, resultsForEmail); err != nil {
+	if err := tmpl.Execute(&emailContents, results); err != nil {
 		log.Fatal(err)
 	}
 
