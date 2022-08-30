@@ -31,50 +31,27 @@ func Now(t time.Time) string {
 }
 
 func Scrape(db *badger.DB, keyword string) {
-	ScrapeHelper(keyword)
+	var data string
 
-	if typeFlag == "keyword" || typeFlag == "kw" {
-		var data string
+	for _, x := range keywordList {
+		ScrapeHelper(keyword)
 
-		for i, x := range results {
-			if typeFlag == x.Keyword {
-				data += x.HeadlineURLs[i].URL
+		for i, y := range results {
+			if x == y.Keyword {
+				data += y.HeadlineURLs[i].URL
 			}
 		}
 
 		hash := Hash(data)
-		err := CheckSimilarity(db, keywordFlag, hash)
+		err := CheckSimilarity(db, x, hash)
 
 		if err != nil {
-			AddKeyValue(db, keywordFlag, hash)
+			sendEmail = true
+			AddKeyValue(db, x, hash)
 
-			if err := tmpl.Execute(&emailContents, results); err != nil {
-				log.Fatal(err)
-			}
-
-			SendEmail(emailContents.String())
-		}
-	} else if typeFlag == "multi-keyword" || typeFlag == "mkw" {
-		for _, x := range keywordList {
-			var data string
-
-			for i, y := range results {
-				if x == y.Keyword {
-					data += y.HeadlineURLs[i].URL
-				}
-			}
-
-			hash := Hash(data)
-			err := CheckSimilarity(db, x, hash)
-
-			if err != nil {
-				sendEmail = true
-				AddKeyValue(db, x, hash)
-
-				for _, z := range results {
-					if z.Keyword == x {
-						resultsForEmail = append(resultsForEmail, z)
-					}
+			for _, z := range results {
+				if z.Keyword == x {
+					resultsForEmail = append(resultsForEmail, z)
 				}
 			}
 		}

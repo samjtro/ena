@@ -115,12 +115,8 @@ func main() {
 
 	defer db.Close()
 
-	if typeFlag == "multi-keyword" || typeFlag == "mkw" {
-		for _, keyword := range keywordList {
-			Scrape(db, keyword)
-		}
-	} else if typeFlag == "keyword" || typeFlag == "kw" {
-		Scrape(db, keywordFlag)
+	for _, keyword := range keywordList {
+		Scrape(db, keyword)
 	}
 
 	SendEmail(emailContents.String())
