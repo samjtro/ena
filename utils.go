@@ -43,21 +43,17 @@ func Scrape(db *badger.DB, keyword string) {
 		}
 
 		hash := Hash(data)
-		err := CheckSimilarity(db, x, hash)
+		//err := CheckSimilarity(db, x, hash); if err != nil {
+		//sendEmail = true
+		AddKeyValue(db, x, hash)
 
-		if err != nil {
-			sendEmail = true
-			AddKeyValue(db, x, hash)
-
-			for _, z := range results {
-				if z.Keyword == x {
-					resultsForEmail = append(resultsForEmail, z)
-				}
+		for _, z := range results {
+			if z.Keyword == x {
+				resultsForEmail = append(resultsForEmail, z)
 			}
 		}
 	}
 
-	result.HeadlineURLs = headlineURLs
 }
 
 func ScrapeHelper(keyword string) {
@@ -66,6 +62,7 @@ func ScrapeHelper(keyword string) {
 	if result.Keyword == "" {
 		result.Keyword = keyword
 	} else if result.Keyword != keyword {
+		result.HeadlineURLs = headlineURLs
 		results = append(results, result)
 		result = Articles{}
 		result.Keyword = keyword

@@ -37,8 +37,6 @@ type Articles struct {
 }
 
 var (
-	sendEmail        bool
-	typeFlag         string
 	siteFlag         string
 	keywordFlag      string
 	fromFlag         string
@@ -82,7 +80,6 @@ func init() {
 		log.Fatal(err)
 	}
 
-	typeFlag = os.Getenv("Type")
 	siteFlag = os.Getenv("site")
 	keywordFlag = os.Getenv("keyword")
 	utcDiffFlag = os.Getenv("utcdiff")
@@ -117,6 +114,10 @@ func main() {
 
 	for _, keyword := range keywordList {
 		Scrape(db, keyword)
+	}
+
+	if err := tmpl.Execute(&emailContents, resultsForEmail); err != nil {
+		log.Fatal(err)
 	}
 
 	SendEmail(emailContents.String())
