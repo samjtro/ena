@@ -3,6 +3,7 @@ module github.com/samjtro/sn
 go 1.19
 
 require (
+	github.com/dgraph-io/badger/v3 v3.2103.2
 	github.com/gocolly/colly v1.2.0
 	github.com/joho/godotenv v1.4.0
 	gopkg.in/gomail.v2 v2.0.0-20160411212932-81ebce5c23df
@@ -16,7 +17,6 @@ require (
 	github.com/antchfx/xpath v1.2.1 // indirect
 	github.com/cespare/xxhash v1.1.0 // indirect
 	github.com/cespare/xxhash/v2 v2.1.1 // indirect
-	github.com/dgraph-io/badger/v3 v3.2103.2 // indirect
 	github.com/dgraph-io/ristretto v0.1.0 // indirect
 	github.com/dustin/go-humanize v1.0.0 // indirect
 	github.com/gobwas/glob v0.2.3 // indirect

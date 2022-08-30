@@ -10,7 +10,6 @@ import (
 	"strings"
 	"text/template"
 
-	badger "github.com/dgraph-io/badger/v3"
 	"github.com/gocolly/colly"
 	"github.com/joho/godotenv"
 )
@@ -42,7 +41,6 @@ var (
 	fromFlag         string
 	fromPasswordFlag string
 	toFlag           string
-	pageSizeFlag     int
 	daysSinceFlag    int
 	utcDiffFlag      string
 	results          []Articles
@@ -86,7 +84,6 @@ func init() {
 	fromFlag = os.Getenv("from")
 	fromPasswordFlag = os.Getenv("frompassword")
 	toFlag = os.Getenv("to")
-	pageSizeFlag, err = strconv.Atoi(os.Getenv("pagesize"))
 
 	if err != nil {
 		log.Fatal(err)
@@ -104,14 +101,6 @@ func init() {
 }
 
 func main() {
-	db, err := badger.Open(badger.DefaultOptions("/tmp/badger"))
-
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	defer db.Close()
-
 	for _, keyword := range keywordList {
 		Scrape(keyword)
 	}

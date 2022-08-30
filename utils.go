@@ -76,6 +76,8 @@ func SendEmail(message string) {
 
 	if err := handler.DialAndSend(msg); err != nil {
 		log.Fatalf("Error: %s", err.Error())
+	} else {
+		fmt.Println("** Email Sent **")
 	}
 }
 
