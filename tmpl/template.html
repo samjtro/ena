@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html>
+        <head>
+                <title>results</title>
+        </head>
+
+        <body>
+                <h2 align="center">Article List</h2>
+                
+                {{range .}}
+                        <h4>{{.Keyword}}</h4>
+                                <ul>
+                                        {{range .HeadlineURLs}}
+                                        <li><a href={{.URL}}>{{.Headline}}</a></li>
+                                        {{end}}
+                                </ul>
+                                
+                {{end}} 
+        </body>
+</html>
