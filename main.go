@@ -72,7 +72,7 @@ func init() {
 		log.Fatalf(err.Error())
 	}
 
-	tmpl = template.Must(template.ParseFiles(fmt.Sprintf("/home/%s/sn/tmpl/template.html", currentUser.Username)))
+	tmpl = template.Must(template.ParseFiles(fmt.Sprintf("/home/%s/sn/tmpl/email.html", currentUser.Username)))
 	err = godotenv.Load(fmt.Sprintf("/home/%s/config.env", currentUser.Username))
 
 	if err != nil {
